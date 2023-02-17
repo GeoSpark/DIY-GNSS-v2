@@ -1,0 +1,13 @@
+manifest:
+  self:
+    path: diy_gnss_v2
+vdfzvfdsb 
+  remotes:
+    - name: nrfconnect
+      url-base: https://github.com/nrfconnect
+
+ projects:
+    - name: nrf
+      repo-path: sdk-nrf
+      remote: nrfconnect
+      revision: v2.2.0
