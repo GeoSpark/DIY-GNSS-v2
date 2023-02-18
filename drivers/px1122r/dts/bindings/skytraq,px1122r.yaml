@@ -1,0 +1,12 @@
+description: SkyTraq PX1122R RTK GNSS module
+
+compatible: "skytraq,px1122r"
+
+include: uart-device.yaml
+
+properties:
+  enable-gpios:
+    type: phandle-array
+    required: false
+    description: |
+      (Optional) Just a placeholder.

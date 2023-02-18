@@ -1,4 +1,4 @@
-if(CONFIG_WIBBLE)
+if(CONFIG_PX1122R_DRIVER)
   # Add driver header files to the set of global include paths.
   zephyr_include_directories(.)
 

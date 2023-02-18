@@ -1,2 +1,6 @@
-config WIBBLE
-    bool "Wobble"
+config PX1122R_DRIVER
+    bool "Enable the SkyTraq PX1122R driver"
+
+config PX1122R_LOG_LEVEL
+    int
+    default 4
