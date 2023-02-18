@@ -1,5 +1,0 @@
-menu "DIY GNSS v2"
-
-rsource "drivers/Kconfig"
-
-endmenu

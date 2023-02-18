@@ -1,3 +1,0 @@
-menu "Drivers"
-rsource "px1122r/Kconfig"
-endmenu
