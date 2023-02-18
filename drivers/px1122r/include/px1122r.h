@@ -3,6 +3,6 @@
 
 #include <zephyr/device.h>
 
-void px1122r_print(const struct device *dev);
+void px1122r_send_data(const struct device *dev);
 
 #endif

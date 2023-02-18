@@ -5,8 +5,8 @@ compatible: "skytraq,px1122r"
 include: uart-device.yaml
 
 properties:
-  enable-gpios:
+  onepps-gpios:
     type: phandle-array
     required: false
     description: |
-      (Optional) Just a placeholder.
+      (Optional) One pulse-per-second output.
