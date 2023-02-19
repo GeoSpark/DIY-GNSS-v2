@@ -16,6 +16,7 @@ static void uart_cb(const struct device *dev, struct uart_event *evt, void *user
 struct px1122r_dev_data {
 	uint8_t foo;
 	const struct device *uart_dev;
+	const struct device *uart_dev2;
     // bool ready;
     uint8_t tx_buf[FRAME_SIZE * 2];
 };
@@ -29,14 +30,15 @@ static int px1122r_init(const struct device *dev) {
 
 	struct px1122r_dev_data* data = dev->data;
 	data->uart_dev = DEVICE_DT_GET(DT_INST_BUS(0));
+	data->uart_dev2 = DEVICE_DT_GET(DT_NODELABEL(uart1));
 
-	if (!device_is_ready(data->uart_dev)) {
+	if (!device_is_ready(data->uart_dev) || !device_is_ready(data->uart_dev2)) {
 		return -ENODEV;
 	}
 
 	data->foo = 'A';
 
-	int err = uart_callback_set(data->uart_dev, uart_cb, data);
+	int err = uart_callback_set(data->uart_dev2, uart_cb, data);
 
 	if (err) {
 		LOG_ERR("Failed to init UART callback");
@@ -78,7 +80,7 @@ void px1122r_send_data(const struct device *dev) {
 	data->tx_buf[0] = data->foo;
 	data->tx_buf[1] = 0;
 	LOG_DBG("Sending %s", data->tx_buf);
-	uart_tx(data->uart_dev, data->tx_buf, 1, SYS_FOREVER_US);
+	uart_tx(data->uart_dev2, data->tx_buf, 1, SYS_FOREVER_US);
 }
 
 #define PX1122R_DEFINE(inst)                                               \

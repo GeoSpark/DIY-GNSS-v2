@@ -4,6 +4,12 @@ list(APPEND ZEPHYR_EXTRA_MODULES
   ${CMAKE_CURRENT_SOURCE_DIR}/drivers/px1122r
   )
 
+if (NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE ZDebug)
+endif()
+
+set(CONF_FILE "prj.${CMAKE_BUILD_TYPE}.conf" "prj.conf")
+
 find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 project(diy_gnss_v2)
 
