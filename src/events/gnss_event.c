@@ -1,4 +1,4 @@
-#include "gnss_event.h"
+#include "events/gnss_event.h"
 
 static void log_gnss_event(const struct app_event_header* hdr) {
     struct gnss_event *event = cast_gnss_event(hdr);

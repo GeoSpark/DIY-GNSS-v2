@@ -1,5 +1,5 @@
 #include "px1122r.h"
-// #include "gnss_event.h"
+// #include "events/gnss_event.h"
 
 #define MODULE gnss
 #include <caf/events/module_state_event.h>
@@ -53,6 +53,6 @@ static bool app_event_handler(const struct app_event_header *aeh) {
 }
 
 APP_EVENT_LISTENER(MODULE, app_event_handler);
+APP_EVENT_SUBSCRIBE(MODULE, module_state_event);
 // APP_EVENT_SUBSCRIBE(MODULE, gnss_event);
 APP_EVENT_SUBSCRIBE(MODULE, button_event);
-APP_EVENT_SUBSCRIBE(MODULE, module_state_event);
