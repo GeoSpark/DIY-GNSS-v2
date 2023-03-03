@@ -1,0 +1,12 @@
+description: Maxim MAX17048 battery fuel gauge sensor
+
+compatible: "maxim,max17048"
+
+include: i2c-device.yaml
+
+properties:
+  interrupt-gpios:
+    type: phandle-array
+    required: false
+    description: |
+      (Optional) Interrupt on alarm signal.

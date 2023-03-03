@@ -1,0 +1,8 @@
+config MAX17048
+    bool "MAX17048 Fuel Gauge"
+	default y
+	select I2C
+
+config MAX17048_LOG_LEVEL
+    int
+    default 4

@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.20.0)
 
 list(APPEND ZEPHYR_EXTRA_MODULES
         ${CMAKE_CURRENT_SOURCE_DIR}/drivers/px1122r
+        ${CMAKE_CURRENT_SOURCE_DIR}/drivers/max17048
         )
 
 if (NOT CMAKE_BUILD_TYPE)
@@ -19,6 +20,7 @@ set(SOURCES
         src/modules/gnss_module.c
         src/modules/base_module.c
         src/modules/rover_module.c
+        src/modules/battery_module.c
         )
 
 target_sources(app PRIVATE ${SOURCES})

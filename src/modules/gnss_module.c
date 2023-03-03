@@ -11,7 +11,7 @@ static const struct device* dev = DEVICE_DT_GET(DT_INST(0, skytraq_px1122r));
 static bool handle_button_event(const struct button_event* event) {
     if (event->pressed) {
 //        LOG_DBG("Here!");
-        px1122r_send_data(dev);
+//        px1122r_send_data(dev);
     }
 
     return false;

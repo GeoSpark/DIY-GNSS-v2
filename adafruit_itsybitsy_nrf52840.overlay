@@ -13,6 +13,15 @@
 	};
 };
 
+&i2c0 {
+    status = "okay";
+
+    max17048: max17048@36 {
+        compatible = "maxim,max17048";
+        reg = <0x36>;
+    };
+};
+
 &uart0 {
     status = "okay";
 
@@ -50,3 +59,4 @@
 		quad-enable-requirements = "S2B1v1";
 	};
 };
+
