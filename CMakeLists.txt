@@ -17,6 +17,8 @@ project(diy_gnss_v2)
 set(SOURCES
         src/main.c
         src/events/gnss_event.c
+        src/events/base_event.c
+        src/events/rover_event.c
         src/modules/gnss_module.c
         src/modules/base_module.c
         src/modules/rover_module.c

@@ -1,5 +1,8 @@
 #define MODULE base
 
+#include "events/base_event.h"
+#include "events/rover_event.h"
+
 #include <caf/events/module_state_event.h>
 #include <zephyr/bluetooth/uuid.h>
 #include <zephyr/bluetooth/gatt.h>
@@ -49,6 +52,7 @@ struct settings_handler base_conf = {
 
 APP_EVENT_LISTENER(MODULE, base_app_event_handler);
 APP_EVENT_SUBSCRIBE(MODULE, module_state_event);
+APP_EVENT_SUBSCRIBE(MODULE, rover_event);
 
 BT_GATT_SERVICE_DEFINE(base_svc,
                        BT_GATT_PRIMARY_SERVICE(BT_UUID_BASE),
@@ -59,7 +63,8 @@ BT_GATT_SERVICE_DEFINE(base_svc,
                                               NULL),
                        BT_GATT_CHARACTERISTIC(BT_UUID_BASE_ACTIVE,
                                               BT_GATT_CHRC_READ | BT_GATT_CHRC_WRITE | BT_GATT_CHRC_NOTIFY,
-                                              BT_GATT_PERM_READ | BT_GATT_PERM_WRITE, base_bt_is_active, base_bt_activate,
+                                              BT_GATT_PERM_READ | BT_GATT_PERM_WRITE, base_bt_is_active,
+                                              base_bt_activate,
                                               NULL),
                        BT_GATT_CUD("Base config", BT_GATT_PERM_READ),
 );
@@ -70,12 +75,15 @@ LOG_MODULE_REGISTER(MODULE, LOG_LEVEL_DBG);
 
 static void base_activate(bool status) {
     base_active = status;
-    // TODO: Send message.
+    struct base_event* event = new_base_event();
+    event->active = base_active;
+    APP_EVENT_SUBMIT(event);
 }
 
 static bool base_configure(struct base_config_t config) {
     if (config.latitude < -90.0 || config.latitude > 90.0 ||
         config.longitude < -180.0 || config.longitude > 180.0 ||
+        config.elevation < -10000.0f || config.elevation > 9000.0f ||
         config.antenna_height < 0.0f ||
         config.sample_interval < 1) {
         return false;
@@ -211,6 +219,12 @@ static bool base_app_event_handler(const struct app_event_header* aeh) {
                 initialized = true;
                 base_init();
             }
+        }
+    } else if (is_rover_event(aeh)) {
+        struct rover_event* event = cast_rover_event(aeh);
+
+        if (event->active) {
+            base_active = false;
         }
     }
 

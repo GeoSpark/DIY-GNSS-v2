@@ -1,12 +1,13 @@
 #define MODULE rover
 
+#include "events/rover_event.h"
+#include "events/base_event.h"
+
 #include <caf/events/module_state_event.h>
 #include <zephyr/bluetooth/uuid.h>
 #include <zephyr/bluetooth/gatt.h>
 #include <zephyr/settings/settings.h>
 #include <bluetooth/adv_prov.h>
-
-LOG_MODULE_REGISTER(MODULE, LOG_LEVEL_DBG);
 
 #define BT_UUID_ROVER        BT_UUID_DECLARE_128(BT_UUID_128_ENCODE(0xc33a1000, 0xbda8, 0x4293, 0xb836, 0x10dd6d78e7a1))
 #define BT_UUID_ROVER_CONFIG BT_UUID_DECLARE_128(BT_UUID_128_ENCODE(0xc33a1001, 0xbda8, 0x4293, 0xb836, 0x10dd6d78e7a1))
@@ -34,8 +35,15 @@ static int rover_load_config(const char*, size_t, settings_read_cb, void*);
 
 static int rover_config_loaded();
 
+struct settings_handler rover_conf = {
+        .name = "rover",
+        .h_set = rover_load_config,
+        .h_commit = rover_config_loaded,
+};
+
 APP_EVENT_LISTENER(MODULE, rover_app_event_handler);
 APP_EVENT_SUBSCRIBE(MODULE, module_state_event);
+APP_EVENT_SUBSCRIBE(MODULE, base_event);
 
 BT_GATT_SERVICE_DEFINE(rover_svc,
                        BT_GATT_PRIMARY_SERVICE(BT_UUID_ROVER),
@@ -46,20 +54,29 @@ BT_GATT_SERVICE_DEFINE(rover_svc,
                                               NULL),
                        BT_GATT_CHARACTERISTIC(BT_UUID_ROVER_ACTIVE,
                                               BT_GATT_CHRC_READ | BT_GATT_CHRC_WRITE | BT_GATT_CHRC_NOTIFY,
-                                              BT_GATT_PERM_READ | BT_GATT_PERM_WRITE, rover_bt_is_active, rover_bt_activate,
+                                              BT_GATT_PERM_READ | BT_GATT_PERM_WRITE, rover_bt_is_active,
+                                              rover_bt_activate,
                                               NULL),
                        BT_GATT_CUD("Rover config", BT_GATT_PERM_READ),
 );
 
-struct settings_handler rover_conf = {
-        .name = "rover",
-        .h_set = rover_load_config,
-        .h_commit = rover_config_loaded,
-};
+LOG_MODULE_REGISTER(MODULE, LOG_LEVEL_DBG);
+
+static bool rover_configure(struct rover_config_t config) {
+    if (config.antenna_height < 0.0f ||
+        config.sample_interval < 1) {
+        return false;
+    }
+
+    settings_save_one("rover/config", &config, sizeof(struct rover_config_t));
+    return true;
+}
 
 static void rover_activate(bool status) {
     rover_active = status;
-    // TODO: Send message.
+    struct rover_event* event = new_rover_event();
+    event->active = rover_active;
+    APP_EVENT_SUBMIT(event);
 }
 
 static ssize_t
@@ -129,7 +146,15 @@ rover_bt_write_data(struct bt_conn* conn, const struct bt_gatt_attr* attr, const
         return 0;
     }
 
-    settings_save_one("rover/config", buf, len);
+    static struct rover_config_t config_buffer;
+
+    uint8_t* conf_buf = (uint8_t*) &config_buffer;
+
+    memcpy(&conf_buf[offset], buf, len);
+
+    if (offset + len >= sizeof(struct rover_config_t)) {
+        rover_configure(config_buffer);
+    }
 
     return len;
 }
@@ -172,7 +197,20 @@ static bool rover_app_event_handler(const struct app_event_header* aeh) {
         struct module_state_event* event = cast_module_state_event(aeh);
 
         if (check_state(event, MODULE_ID(main), MODULE_STATE_READY)) {
-            rover_init();
+            static bool initialized = false;
+
+            if (initialized) {
+                LOG_WRN("Module \"rover\" is being initialised twice. Skipping.");
+            } else {
+                initialized = true;
+                rover_init();
+            }
+        }
+    } else if (is_base_event(aeh)) {
+        struct base_event* event = cast_base_event(aeh);
+
+        if (event->active) {
+            rover_active = false;
         }
     }
 
