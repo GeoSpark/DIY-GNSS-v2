@@ -41,22 +41,17 @@
 };
 
 &qspi {
-	status = "okay";
-	pinctrl-0 = <&qspi_default>;
-	pinctrl-1 = <&qspi_sleep>;
-	pinctrl-names = "default", "sleep";
 	gd25q16: gd25q16@0 {
-		compatible = "nordic,qspi-nor";
-		reg = <0>;
-		writeoc = "pp4o";
-		readoc = "read4io";
 		sck-frequency = <30000000>;  // 32MHz doesn't work with this particular IC.
-		jedec-id = [c8 40 15];
-		size = <16777216>;
-		has-dpd;
-		t-enter-dpd = <20000>;
-		t-exit-dpd = <20000>;
-		quad-enable-requirements = "S2B1v1";
 	};
 };
 
+&spi1 {
+	rfm9x: rfm9x@0 {
+		compatible = "hoperf,rfm9x";
+		reg = <0>;
+		spi-max-frequency = <5250000>;
+		en-gpios = <&gpio0 12 GPIO_ACTIVE_HIGH>;
+		rst-gpios = <&gpio0 26 GPIO_ACTIVE_LOW>;
+	};
+};

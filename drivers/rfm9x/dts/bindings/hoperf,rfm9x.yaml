@@ -1,0 +1,19 @@
+description: HopeRF RFM9x LoRa module
+
+compatible: "hoperf,rfm9x"
+
+include: spi-device.yaml
+
+properties:
+  en-gpios:
+    type: phandle-array
+    required: false
+    description: |
+      (Optional) Enable pin.
+
+  rst-gpios:
+    type: phandle-array
+    required: false
+    description: |
+      (Optional) Reset pin.
+

@@ -1,0 +1,8 @@
+config RFM9x
+    bool "RFM9x LoRa"
+	default y
+	select SPI
+
+config RFM9x_LOG_LEVEL
+    int
+    default 4
