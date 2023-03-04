@@ -1,4 +1,5 @@
 #define MODULE battery
+
 #include <caf/events/module_state_event.h>
 #include <zephyr/device.h>
 #include <zephyr/drivers/sensor.h>
@@ -6,32 +7,38 @@
 #include <zephyr/bluetooth/gatt.h>
 #include <bluetooth/adv_prov.h>
 
-static void battery_timer_update(struct k_timer* timer_id);
-static void battery_timer_work_handler(struct k_work* work);
-static bool app_event_handler(const struct app_event_header* aeh);
-static ssize_t bt_read_level(struct bt_conn *conn, const struct bt_gatt_attr *attr, void *buf, uint16_t len, uint16_t offset);
-static void bt_ccc_cfg_changed(const struct bt_gatt_attr *attr, uint16_t value);
-static void connected(struct bt_conn *connected, uint8_t err);
-static void disconnected(struct bt_conn *disconn, uint8_t reason);
+static bool battery_app_event_handler(const struct app_event_header*);
+
+static void battery_timer_update(struct k_timer*);
+
+static void battery_timer_work_handler(struct k_work*);
+
+static ssize_t battery_bt_read_level(struct bt_conn*, const struct bt_gatt_attr*, void*, uint16_t, uint16_t);
+
+static void battery_bt_ccc_cfg_changed(const struct bt_gatt_attr*, uint16_t);
+
+static void battery_bt_connected(struct bt_conn*, uint8_t);
+
+static void battery_bt_disconnected(struct bt_conn*, uint8_t);
 
 K_TIMER_DEFINE(battery_timer, battery_timer_update, NULL);
 K_WORK_DEFINE(battery_timer_work, battery_timer_work_handler);
 
-APP_EVENT_LISTENER(MODULE, app_event_handler);
+APP_EVENT_LISTENER(MODULE, battery_app_event_handler);
 APP_EVENT_SUBSCRIBE(MODULE, module_state_event);
 
 BT_GATT_SERVICE_DEFINE(battery_svc,
                        BT_GATT_PRIMARY_SERVICE(BT_UUID_BAS),
                        BT_GATT_CHARACTERISTIC(BT_UUID_BAS_BATTERY_LEVEL,
                                               BT_GATT_CHRC_READ | BT_GATT_CHRC_NOTIFY,
-                                              BT_GATT_PERM_READ, bt_read_level, NULL,
+                                              BT_GATT_PERM_READ, battery_bt_read_level, NULL,
                                               NULL),
-                       BT_GATT_CCC(bt_ccc_cfg_changed, BT_GATT_PERM_READ | BT_GATT_PERM_WRITE),
+                       BT_GATT_CCC(battery_bt_ccc_cfg_changed, BT_GATT_PERM_READ | BT_GATT_PERM_WRITE),
 );
 
 BT_CONN_CB_DEFINE(conn_callbacks) = {
-        .connected = connected,
-        .disconnected = disconnected,
+        .connected = battery_bt_connected,
+        .disconnected = battery_bt_disconnected,
 };
 
 LOG_MODULE_REGISTER(MODULE, LOG_LEVEL_DBG);
@@ -41,7 +48,7 @@ static uint8_t battery_level;
 volatile bool notify_enable;
 struct bt_conn* connection;
 
-static void init_fn(void) {
+static void battery_init() {
     if (!device_is_ready(dev)) {
         LOG_ERR("MAX17048 not ready.");
         module_set_state(MODULE_STATE_ERROR);
@@ -55,12 +62,12 @@ static void init_fn(void) {
     module_set_state(MODULE_STATE_READY);
 }
 
-static bool app_event_handler(const struct app_event_header* aeh) {
+static bool battery_app_event_handler(const struct app_event_header* aeh) {
     if (is_module_state_event(aeh)) {
-        struct module_state_event *event = cast_module_state_event(aeh);
+        struct module_state_event* event = cast_module_state_event(aeh);
 
         if (check_state(event, MODULE_ID(main), MODULE_STATE_READY)) {
-            init_fn();
+            battery_init();
         }
     }
 
@@ -88,7 +95,7 @@ static void battery_timer_work_handler(struct k_work* work) {
         return;
     }
 
-    battery_level = (uint8_t)soc.val1;
+    battery_level = (uint8_t) soc.val1;
 
     if (connection && notify_enable) {
         rc = bt_gatt_notify(connection, &battery_svc.attrs[2], &battery_level, sizeof(battery_level));
@@ -99,14 +106,15 @@ static void battery_timer_work_handler(struct k_work* work) {
     }
 }
 
-static ssize_t bt_read_level(struct bt_conn *conn, const struct bt_gatt_attr *attr, void *buf, uint16_t len, uint16_t offset) {
+static ssize_t
+battery_bt_read_level(struct bt_conn* conn, const struct bt_gatt_attr* attr, void* buf, uint16_t len, uint16_t offset) {
     return bt_gatt_attr_read(conn, attr, buf, len, offset, &battery_level, sizeof(battery_level));
 }
 
-static void bt_ccc_cfg_changed(const struct bt_gatt_attr *attr, uint16_t value) {
+static void battery_bt_ccc_cfg_changed(const struct bt_gatt_attr* attr, uint16_t value) {
     notify_enable = (value == BT_GATT_CCC_NOTIFY);
 
-    if (notify_enable) {
+    if (connection && notify_enable) {
         int rc = bt_gatt_notify(connection, attr, &battery_level, sizeof(battery_level));
 
         if (rc != 0) {
@@ -115,7 +123,7 @@ static void bt_ccc_cfg_changed(const struct bt_gatt_attr *attr, uint16_t value) 
     }
 }
 
-static void connected(struct bt_conn *connected, uint8_t err) {
+static void battery_bt_connected(struct bt_conn* connected, uint8_t err) {
     if (err) {
         LOG_ERR("Connection failed (err %u)", err);
     } else {
@@ -125,7 +133,7 @@ static void connected(struct bt_conn *connected, uint8_t err) {
     }
 }
 
-static void disconnected(struct bt_conn *disconn, uint8_t reason) {
+static void battery_bt_disconnected(struct bt_conn* disconn, uint8_t reason) {
     ARG_UNUSED(disconn);
     ARG_UNUSED(reason);
 
