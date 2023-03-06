@@ -1,3 +1,4 @@
+#ifdef CONFIG_MAX17048
 #define MODULE battery
 
 #include <caf/events/module_state_event.h>
@@ -24,6 +25,7 @@ static void battery_bt_disconnected(struct bt_conn*, uint8_t);
 K_TIMER_DEFINE(battery_timer, battery_timer_update, NULL);
 K_WORK_DEFINE(battery_timer_work, battery_timer_work_handler);
 
+
 APP_EVENT_LISTENER(MODULE, battery_app_event_handler);
 APP_EVENT_SUBSCRIBE(MODULE, module_state_event);
 
@@ -42,8 +44,8 @@ BT_CONN_CB_DEFINE(conn_callbacks) = {
 };
 
 LOG_MODULE_REGISTER(MODULE, LOG_LEVEL_DBG);
-
 static const struct device* dev = DEVICE_DT_GET(DT_INST(0, maxim_max17048));
+
 static uint8_t battery_level;
 volatile bool notify_enable;
 struct bt_conn* connection;
@@ -142,3 +144,4 @@ static void battery_bt_disconnected(struct bt_conn* disconn, uint8_t reason) {
         connection = NULL;
     }
 }
+#endif

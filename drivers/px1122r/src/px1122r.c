@@ -26,8 +26,6 @@ struct px1122r_dev_cfg {
 };
 
 static int px1122r_init(const struct device *dev) {
-	LOG_INF("Initializing %s", dev->name);
-
 	struct px1122r_dev_data* data = dev->data;
 	data->uart_dev = DEVICE_DT_GET(DT_INST_BUS(0));
 	data->uart_dev2 = DEVICE_DT_GET(DT_NODELABEL(uart1));
@@ -44,8 +42,6 @@ static int px1122r_init(const struct device *dev) {
 		LOG_ERR("Failed to init UART callback");
 		return -EINVAL;
 	}
-
-	LOG_INF("%s initialized", dev->name);
 
 	return 0;
 }
