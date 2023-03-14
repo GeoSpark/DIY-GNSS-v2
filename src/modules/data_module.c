@@ -34,7 +34,6 @@ SETTINGS_STATIC_HANDLER_DEFINE(MODULE, DEVICE_SETTINGS_KEY, NULL, load_config, N
 
 APP_EVENT_LISTENER(MODULE, app_event_handler);
 APP_EVENT_SUBSCRIBE(MODULE, module_state_event);
-APP_EVENT_SUBSCRIBE(MODULE, rover_event);
 
 BT_GATT_SERVICE_DEFINE(svc,
                        BT_GATT_PRIMARY_SERVICE(BT_UUID_GNSS),
@@ -44,15 +43,16 @@ BT_GATT_SERVICE_DEFINE(svc,
                                               bt_read_data,
                                               bt_write_data,
                                               NULL),
-                       BT_GATT_CUD("Config", BT_GATT_PERM_READ),
+//                       BT_GATT_CUD("Config", BT_GATT_PERM_READ),
 );
 
-BT_LE_ADV_PROV_AD_PROVIDER_REGISTER(service_uuids, get_data);
+//BT_LE_ADV_PROV_AD_PROVIDER_REGISTER(service_uuids, get_data);
 
 LOG_MODULE_REGISTER(MODULE, LOG_LEVEL_DBG);
 
 static ssize_t
 bt_read_data(struct bt_conn* conn, const struct bt_gatt_attr* attr, void* buf, uint16_t len, uint16_t offset) {
+    return 0;
     void* val = NULL;
     uint16_t val_len;
 
@@ -76,6 +76,7 @@ bt_write_data(struct bt_conn* conn, const struct bt_gatt_attr* attr, const void*
     ARG_UNUSED(offset);
     ARG_UNUSED(flags);
 
+    return 0;
     if (bt_uuid_cmp(attr->uuid, BT_UUID_CONFIG) != 0) {
         LOG_ERR("Trying to write unknown value to config");
         return 0;
@@ -152,7 +153,7 @@ static bool app_event_handler(const struct app_event_header* aeh) {
     if (is_module_state_event(aeh)) {
         struct module_state_event* event = cast_module_state_event(aeh);
 
-        if (check_state(event, MODULE_ID(main), MODULE_STATE_READY)) {
+        if (check_state(event, MODULE_ID(settings_loader), MODULE_STATE_READY)) {
             int err = init_settings();
 
             if (err != 0) {
@@ -164,6 +165,7 @@ static bool app_event_handler(const struct app_event_header* aeh) {
 
             struct data_event* config_event = new_data_event();
             config_event->config = config;
+            config_event->event_type = DATA_EVENT_CONFIG_INITIAL;
             APP_EVENT_SUBMIT(config_event);
         }
     }
@@ -172,14 +174,14 @@ static bool app_event_handler(const struct app_event_header* aeh) {
 }
 
 // Callback used by BT_LE_ADV_PROV_AD_PROVIDER_REGISTER. It has to be called get_data().
-static int
-get_data(struct bt_data* ad, const struct bt_le_adv_prov_adv_state* state, struct bt_le_adv_prov_feedback* fb) {
-    ARG_UNUSED(state);
-    ARG_UNUSED(fb);
-
-    ad->type = BT_UUID_ADV.type;
-    ad->data_len = BT_UUID_ADV.data_len;
-    ad->data = BT_UUID_ADV.data;
-
-    return 0;
-}
+//static int
+//get_data(struct bt_data* ad, const struct bt_le_adv_prov_adv_state* state, struct bt_le_adv_prov_feedback* fb) {
+//    ARG_UNUSED(state);
+//    ARG_UNUSED(fb);
+//
+//    ad->type = BT_UUID_ADV.type;
+//    ad->data_len = BT_UUID_ADV.data_len;
+//    ad->data = BT_UUID_ADV.data;
+//
+//    return 0;
+//}

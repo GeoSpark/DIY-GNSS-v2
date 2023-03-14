@@ -26,6 +26,7 @@ struct px1122r_dev_data {
     const struct device* uart_dev2;
     uint8_t cur_buf;
     uint8_t rx_bufs[NUM_RX_BUFS][BUF_SIZE];
+    uint8_t tx_buf[BUF_SIZE];
     bool stream_mode;
     px1122r_callback_t callback;
     int8_t command_response;
@@ -38,7 +39,7 @@ struct px1122r_dev_cfg {
 #define WORKER_PRIORITY 5
 
 K_THREAD_STACK_DEFINE(worker_stack_area, WORKER_STACK_SIZE);
-K_SEM_DEFINE(command_sem, 0, 1)
+static K_SEM_DEFINE(command_sem, 0, 1);
 
 struct k_work_q work_queue;
 
@@ -86,6 +87,8 @@ static int px1122r_init(const struct device* dev) {
         LOG_ERR("Failed to init UART callback");
         return -EINVAL;
     }
+
+    LOG_DBG("PX1122R initialized");
 
     return 0;
 }
@@ -224,12 +227,6 @@ static void uart_cb(const struct device* dev, struct uart_event* evt, void* user
     struct px1122r_dev_data* data = px1122r_dev->data;
 
     switch (evt->type) {
-        case UART_TX_DONE:
-            break;
-
-        case UART_TX_ABORTED:
-            break;
-
         case UART_RX_RDY:
             if (!k_work_is_pending(&work_item.work)) {
                 work_item.dev_data = data;
@@ -246,13 +243,7 @@ static void uart_cb(const struct device* dev, struct uart_event* evt, void* user
             uart_rx_buf_rsp(dev, data->rx_bufs[data->cur_buf], BUF_SIZE);
             break;
 
-        case UART_RX_BUF_RELEASED:
-            break;
-
-        case UART_RX_DISABLED:
-            break;
-
-        case UART_RX_STOPPED:
+        default:
             break;
     }
 }
@@ -279,21 +270,20 @@ int px1122r_send_command(const struct device* dev, const void* command, const ui
     data->stream_mode = false;
     uart_rx_enable(data->uart_dev, data->rx_bufs[data->cur_buf], BUF_SIZE, RX_BUF_TIMEOUT_US);
 
-    uint8_t msg_buf[length + 7];
-    msg_buf[0] = 0xa0;
-    msg_buf[1] = 0xa1;
-    msg_buf[2] = length >> 8;
-    msg_buf[3] = length & 0xff;
-    memcpy(&msg_buf[4], command, length);
-    msg_buf[length + 4] = calc_checksum(command, length);
-    msg_buf[length + 5] = 0x0d;
-    msg_buf[length + 6] = 0x0a;
+    data->tx_buf[0] = 0xa0;
+    data->tx_buf[1] = 0xa1;
+    data->tx_buf[2] = length >> 8;
+    data->tx_buf[3] = length & 0xff;
+    memcpy(&data->tx_buf[4], command, length);
+    data->tx_buf[length + 4] = calc_checksum(command, length);
+    data->tx_buf[length + 5] = 0x0d;
+    data->tx_buf[length + 6] = 0x0a;
 
-    uart_tx(data->uart_dev, msg_buf, length + 7, SYS_FOREVER_US);
+    uart_tx(data->uart_dev, data->tx_buf, length + 7, SYS_FOREVER_US);
 
     int sem_ret = k_sem_take(&command_sem, K_MSEC(100));
     if (sem_ret != 0) {
-        LOG_ERR("Failed to send command 0x%02x. %d", msg_buf[4], sem_ret);
+        LOG_ERR("Failed to send command 0x%02x. %d", data->tx_buf[4], sem_ret);
         uart_rx_disable(data->uart_dev);
         return -1;
     }
