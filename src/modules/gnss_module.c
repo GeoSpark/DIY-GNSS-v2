@@ -1,6 +1,6 @@
 #include "px1122r.h"
 #include "events/data_event.h"
-//#include "events/gnss_event.h"
+#include "events/gnss_event.h"
 
 #define MODULE gnss
 #include <caf/events/module_state_event.h>
@@ -11,16 +11,16 @@ LOG_MODULE_REGISTER(MODULE, LOG_LEVEL_DBG);
 static const struct device* dev = DEVICE_DT_GET(DT_INST(0, skytraq_px1122r));
 static bool is_streaming = false;
 
+#define BUF_SIZE 512
+#define NUM_BUFS 2
+
+static uint8_t bufs[NUM_BUFS][BUF_SIZE];
+static uint8_t cur_buf = 0;
+
 #define WORKER_STACK_SIZE 512
 #define WORKER_PRIORITY 6
 
 K_THREAD_STACK_DEFINE(gnss_worker_stack_area, WORKER_STACK_SIZE);
-
-#define RING_BUF_BYTES 128
-#define NUM_BUFS 2
-
-//static uint8_t bufs[NUM_BUFS][RING_BUF_BYTES];
-//static uint8_t cur_buf = 0;
 
 static struct k_work_q gnss_work_queue;
 static struct work_item_t {
@@ -29,20 +29,20 @@ static struct work_item_t {
     enum data_event_type event_type;
 } gnss_work_item;
 
-static void stream_cb(const uint8_t* buf, uint8_t len) {
+static void stream_cb(const uint8_t* buf, uint16_t len) {
     // TODO: Something clever with incoming data being bigger than our buffer.
-//    if (len > RING_BUF_BYTES) {
-//        LOG_WRN("Trying to put %d bytes into a %d byte buffer", len, RING_BUF_BYTES);
-//        len = RING_BUF_BYTES;
-//    }
-//
-//    memcpy(bufs[cur_buf], buf, len);
-//
-//    struct gnss_event* event = new_gnss_event();
-//    event->bytes = bufs[cur_buf];
-//    event->size = len;
-//    APP_EVENT_SUBMIT(event);
-//    cur_buf = (cur_buf + 1) % NUM_BUFS;
+    if (len > BUF_SIZE) {
+        LOG_WRN("Trying to put %d bytes into a %d byte buffer", len, BUF_SIZE);
+        len = BUF_SIZE;
+    }
+
+    memcpy(bufs[cur_buf], buf, len);
+
+    struct gnss_event* event = new_gnss_event();
+    event->bytes = bufs[cur_buf];
+    event->size = len;
+    APP_EVENT_SUBMIT(event);
+    cur_buf = (cur_buf + 1) % NUM_BUFS;
 }
 
 static bool handle_button_event(const struct button_event* event) {

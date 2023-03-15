@@ -3,7 +3,7 @@
 
 #include <zephyr/device.h>
 
-typedef void (* px1122r_callback_t)(const uint8_t* buf, uint8_t len);
+typedef void (* px1122r_callback_t)(const uint8_t* buf, uint16_t len);
 
 int px1122r_start_stream(const struct device* dev, px1122r_callback_t cb);
 

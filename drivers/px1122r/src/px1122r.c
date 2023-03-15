@@ -17,7 +17,7 @@ static void uart_cb(const struct device* dev, struct uart_event* evt, void* user
 static void work_handler(struct k_work* work);
 
 #define NUM_RX_BUFS 2
-#define BUF_SIZE 64
+#define BUF_SIZE 256
 #define MAX_PAYLOAD_SIZE 128
 #define RX_BUF_TIMEOUT_US 250
 
@@ -32,10 +32,7 @@ struct px1122r_dev_data {
     int8_t command_response;
 };
 
-struct px1122r_dev_cfg {
-};
-
-#define WORKER_STACK_SIZE 128
+#define WORKER_STACK_SIZE 512
 #define WORKER_PRIORITY 5
 
 K_THREAD_STACK_DEFINE(worker_stack_area, WORKER_STACK_SIZE);
@@ -47,7 +44,7 @@ struct work_item_t {
     struct k_work work;
     struct px1122r_dev_data* dev_data;
     uint8_t* buf;
-    uint8_t len;
+    uint16_t len;
 } work_item;
 
 struct skytraq_message_t {
@@ -222,7 +219,6 @@ static void work_handler(struct k_work* work) {
 }
 
 static void uart_cb(const struct device* dev, struct uart_event* evt, void* user_data) {
-    ARG_UNUSED(user_data);
     const struct device* px1122r_dev = user_data;
     struct px1122r_dev_data* data = px1122r_dev->data;
 
@@ -231,6 +227,7 @@ static void uart_cb(const struct device* dev, struct uart_event* evt, void* user
             if (!k_work_is_pending(&work_item.work)) {
                 work_item.dev_data = data;
                 work_item.buf = evt->data.rx.buf + evt->data.rx.offset;
+                LOG_DBG("len %d", evt->data.rx.len);
                 work_item.len = evt->data.rx.len;
                 k_work_submit_to_queue(&work_queue, &work_item.work);
             } else {
@@ -307,13 +304,11 @@ int px1122r_send_command(const struct device* dev, const void* command, const ui
         .callback = NULL,                                                  \
         .command_response = false,                                         \
     };                                                                     \
-    static const struct px1122r_dev_cfg px1122r_cfg_##inst = {             \
-    };                                                                     \
     DEVICE_DT_INST_DEFINE(inst,                                            \
                           px1122r_init,                                    \
                           NULL,                                            \
                           &px1122r_data_##inst,                            \
-                          &px1122r_cfg_##inst,                             \
+                          NULL,                                            \
                           POST_KERNEL, CONFIG_APPLICATION_INIT_PRIORITY,   \
                           NULL);
 

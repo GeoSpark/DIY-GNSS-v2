@@ -7,7 +7,7 @@ struct gnss_event {
         struct app_event_header header;
 
         int8_t* bytes;
-        uint32_t size;
+        uint16_t size;
 };
 
 APP_EVENT_TYPE_DECLARE(gnss_event);
